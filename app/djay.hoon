@@ -82,50 +82,19 @@
 ++  get-video-from-message
   |=  envelope:hall
   ^-  (unit cord)
-  =+  vid='8dENYJbN1z4'
-  [~ vid]
-  ::TODO  figure out mint-move on ?= host
-  :: ?.  ?=(%url -.sep.gam)  ~
-  :: =*  url=purf:eyre  url.sep.gam
-  :: ~!  url
-  :: =*  purl  p.url
-  :: =*  hart  p.purl
-  :: =*  host  r.hart
-  :: =*  path  q.q.p.url
-  :: =*  quer    r.p.url
-  :: =*  typ   p.q.p.url
-  :: ~!  host
-  :: ~!  -.host
-  :: ?:  ?=(%.n -.host)  ~
-  :: ?:  ?&  =(`0 (find ~['com' 'youtube'] p.hos))
-  ::         ?=(^ (find ~['watch'] path))
-  ::     ==
-  ::   ~&  :-  %video-id
-  ::       (~(got by (~(gas by *(map @t @t)) quer)) 'v')
-  ::   ~
-  :: ?:  =(`0 (find ~['be' 'youtu'] p.hos))
-  ::   ~&  [%video-id (snag 0 path)]
-  ::   ~
-  :: ~
-  :: ~!  r.p.url
-  :: ?:  ?=(%| -.r.p.url)  ~
-  :: =*  domain  p.r.p.url
-  :: =*  url-path  q.q.p.url
-  :: =*  url-params  r.url
-  :: ~&  domain
-  :: ~!  domain
-  :: ?^  (find ~['be' 'youtu'] domain)
-  ::   ::TODO  get from path
-  ::   ~&  %youtu-be
-  ::   ~
-  :: ?^  (find ~['com' 'youtube'] domain)
-  ::   ::TODO  get from params
-  ::   ~&  %youtube
-  ::   ~
-  :: ~
-  ::TODO  per hall message:
-  ::      - if not %url speech, do nothing
-  ::      - if yt url, get video id, build api request
+  ?.  ?=(%url -.sep.gam)  ~
+  =*  url  url.sep.gam
+  =*  host  r.p.p.url
+  =*  path  q.q.p.url
+  =*  quer    r.p.url
+  ?:  ?=(%| -.r.p.p.url)  ~
+  ?:  ?&  =(`0 (find ~['com' 'youtube'] p.host))
+          ?=(^ (find ~['watch'] path))
+      ==
+    `(~(got by (~(gas by *(map @t @t)) quer)) 'v')
+  ?:  =(`0 (find ~['be' 'youtu'] p.host))
+    `(snag 0 path)
+  ~
 ::
 ++  request-video-details
   |=  video-ids=(list cord)
