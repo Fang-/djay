@@ -8,6 +8,7 @@
   $:  videos=(map video-id video)
       queue=(list video-id)
       now-playing=video-id
+      source=circle:hall
   ==
 ::
 ++  video-id  cord
@@ -16,12 +17,22 @@
       duration=@dr
   ==
 ::
++$  playlist
+  (list [video-id video])
+::
 ::
 ++  move  (pair bone card)
 ++  card
   $%  [%peer wire dock path]
       [%hiss wire (unit user:eyre) mark %hiss hiss:eyre]
       [%wait wire @da]
+      [%diff update]
+      [%poke wire [ship %hall] %hall-action action:hall]
+  ==
+::
+++  update
+  $%  [%djay-current video-id]
+      [%djay-playlist playlist]
   ==
 --
 ::
@@ -32,23 +43,27 @@
   |=  old=(unit state)
   ^-  (quip move _this)
   ~&  %prep-called
-  ?~  old  [~ this]
+  ?~  old
+    [~ this]
   [~ this(+<+ u.old)]
 ::
 ++  poke-noun
-  |=  cmd=?(%watch %debug)
+  |=  cmd=?(%watch %empty-queue %debug)
   ^-  (quip move _this)
   ?-  cmd
       %watch
-    :_  this
+    :_  this(source [our.bol %music])
     :_  ~
     ^-  move
     :-  ost.bol
     :*  %peer
         /hall-sub
         [our.bol %hall]
-        /circle/testing/grams
+        /circle/music/grams
     ==
+  ::
+      %empty-queue
+    [~ this(queue ~)]
   ::
       %debug
     ~&  videos=videos
@@ -64,6 +79,9 @@
     (murn nes.piz get-video-from-message)
   =.  video-ids
     (skip video-ids ~(has by videos))
+  ::  deduplicate
+  =.  video-ids
+    ~(tap in (~(gas in *(set video-id)) video-ids))
   ?~  video-ids  [~ this]
   :_  this
   [(request-video-details video-ids) ~]
@@ -130,7 +148,7 @@
   =.  queue
     %+  roll  res
     |=  [[id=cord *] q=_queue]
-    ?:  (~(has by videos) id)  q
+    :: ?:  (~(has by videos) id)  q
     (weld q [id]~)
   =.  videos  (~(gas by videos) res)
   ::  if we weren't playing yet, and there's a queue now, start playing
@@ -138,7 +156,7 @@
   ?.  was-idle  [~ this]
   ?:  =(0 (lent queue))  [~ this]
   %-  play-next(queue (slag 1 queue))
-  (snag 0 queue)
+  [(snag 0 queue) &]
 ::
 ++  parse-video-details
   =,  dejs:format
@@ -166,29 +184,73 @@
   ==
 ::
 ++  wake-next
-  |=  [wir=wire ~]
+  |=  [wir=wire err=(unit tang)]
   ^-  (quip move _this)
+  ?^  err
+    (mean u.err)
+  ?:  =(0 ~(wyt by videos))
+    ~&  %silently-drop-timer
+    [~ this]
+  =+  from-queue=?=(^ queue)
   =^  next-id=video-id  queue
     ?^  queue  [i.queue t.queue]
     :_  queue
     =+  video-list=~(tap by videos)
     =+  count=(lent video-list)
+    ::TODO  avoid now-playing
     =<  p
     %+  snag
       (~(rad og eny.bol) count)
     video-list
-  ::TODO  update subscribers
-  ~&  [%now-playing next-id]
-  (play-next next-id)
+  =^  moz  this  (play-next next-id from-queue)
+  :_  this
+  %+  weld  moz
+  ^-  (list move)
+  %+  murn  ~(tap by sup.bol)
+  |=  [=bone =ship =path]
+  ^-  (unit move)
+  (update-to path bone)
 ::
 ++  play-next
-  |=  next-id=video-id
+  |=  [next-id=video-id say=?]
   ^-  (quip move _this)
-  ?:  =(0 ~(wyt by videos))
-    ~&  %silently-drop-timer
-    [~ this]
   :_  this(now-playing next-id)
-  =-  ~&  [%next-song-length-is -]
-      [ost.bol %wait /next (add now.bol -)]~
-  duration:(~(got by videos) next-id)
+  =+  %+  add  ~s2  ::NOTE  account for video buffering time
+      duration:(~(got by videos) next-id)
+  :-  [ost.bol %wait /next (add now.bol (min - ~m15))]
+  ?.  say  ~
+  :_  ~
+  =-  [ost.bol %poke / [our.bol %hall] %hall-action -]
+  :+  %phrase
+    `audience:hall`[source ~ ~]
+  =+  (trip name:(~(got by videos) next-id))
+  [%app dap.bol %lin | (crip "Now playing: {-}")]~
+::
+++  peer
+  |=  wir=wire
+  :_  this
+  =+  mov=(update-to wir ost.bol)
+  ?~(mov ~ [u.mov]~)
+::
+++  update-to
+  |=  [=path =bone]
+  ^-  (unit move)
+  ?+  path  ~
+      [%current *]
+    `[bone %diff %djay-current now-playing]
+  ::
+      [%playlist *]
+    %-  some
+    :^  bone  %diff  %djay-playlist
+    ^-  playlist
+    :-  [now-playing (~(got by videos) now-playing)]
+    %+  turn  queue
+    |=  id=video-id
+    [id (~(got by videos) id)]
+  ==
+::
+++  peek
+  |=  a=*
+  ~&  [%got-peek a]
+  [~ this]
 --
